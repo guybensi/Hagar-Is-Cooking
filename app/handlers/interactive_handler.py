@@ -40,7 +40,9 @@ def build_step_keyboard(session: SessionData) -> InlineKeyboardMarkup:
         )
     )
     row.append(InlineKeyboardButton(labels.WHY_BUTTON, callback_data="step:why"))
-    return InlineKeyboardMarkup([row])
+    return InlineKeyboardMarkup(
+        [row, [InlineKeyboardButton(labels.FULL_RECIPE_MODE_BUTTON, callback_data="mode:full")]]
+    )
 
 
 async def render_step(
@@ -83,10 +85,12 @@ async def handle_step_navigation(update: Update, context: ContextTypes.DEFAULT_T
             await query.edit_message_text(
                 labels.COOKING_COMPLETE_MESSAGE.format(recipe_name=session.final_recipe.recipe_name)
             )
-            await session_service.advance_to(session, SessionState.COMPLETED)
-            source_url = session.extracted_recipe.source_url if session.extracted_recipe else None
-            await RecipeHistoryService(RecipeHistoryRepository(db_session)).log_completed(
-                update.effective_user.id, session.final_recipe, source_url, "interactive"
+            history_service = RecipeHistoryService(RecipeHistoryRepository(db_session))
+            await history_service.log_completed_once(
+                session, update.effective_user.id, "interactive"
+            )
+            await session_service.advance_to(
+                session, SessionState.COMPLETED, history_logged=session.history_logged
             )
             return
 

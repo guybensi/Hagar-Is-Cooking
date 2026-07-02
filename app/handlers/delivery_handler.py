@@ -6,7 +6,7 @@ from app.database.recipe_history_repository import RecipeHistoryRepository
 from app.database.session_repository import SessionRepository
 from app.handlers.interactive_handler import render_step
 from app.models.recipe import FinalRecipe
-from app.models.session import SessionState
+from app.models.session import MODE_SWITCHABLE_STATES, SessionState
 from app.services.recipe_history_service import RecipeHistoryService
 from app.services.session_service import SessionService
 from app.static import labels
@@ -29,6 +29,19 @@ def build_delivery_mode_keyboard() -> InlineKeyboardMarkup:
     )
 
 
+def build_full_recipe_keyboard() -> InlineKeyboardMarkup:
+    """Lets the user switch to step-by-step mode after already viewing the full recipe."""
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton(
+                    labels.INTERACTIVE_MODE_BUTTON, callback_data="mode:interactive"
+                )
+            ]
+        ]
+    )
+
+
 def build_full_recipe_message(recipe: FinalRecipe) -> str:
     lines = [f"{PLATE} {recipe.recipe_name}", "", labels.FULL_RECIPE_INGREDIENTS_HEADER]
     for ingredient in recipe.ingredients:
@@ -46,7 +59,12 @@ def build_full_recipe_message(recipe: FinalRecipe) -> str:
 
 
 async def handle_mode_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Entry point for step 10: deliver the final recipe as full text or interactive steps."""
+    """Entry point for step 10: deliver the final recipe as full text or interactive steps.
+
+    Also handles switching between the two modes after the initial choice (mode:full /
+    mode:interactive are reused as toggle buttons on the full-recipe message and on every
+    interactive step).
+    """
     query = update.callback_query
     await query.answer()
 
@@ -59,23 +77,30 @@ async def handle_mode_choice(update: Update, context: ContextTypes.DEFAULT_TYPE)
         session_service = SessionService(SessionRepository(db_session))
         session = await session_service.load_or_create(chat_id)
 
-        if session.state != SessionState.AWAITING_DELIVERY_MODE or session.final_recipe is None:
+        if session.state not in MODE_SWITCHABLE_STATES or session.final_recipe is None:
             await query.edit_message_text(labels.STALE_SELECTION_MESSAGE)
             return
 
         if mode == "full":
-            await query.edit_message_text(build_full_recipe_message(session.final_recipe))
-            await session_service.advance_to(
-                session, SessionState.COMPLETED, delivery_mode="full"
+            await query.edit_message_text(
+                build_full_recipe_message(session.final_recipe),
+                reply_markup=build_full_recipe_keyboard(),
             )
-            source_url = session.extracted_recipe.source_url if session.extracted_recipe else None
-            await RecipeHistoryService(RecipeHistoryRepository(db_session)).log_completed(
-                update.effective_user.id, session.final_recipe, source_url, "full"
+            history_service = RecipeHistoryService(RecipeHistoryRepository(db_session))
+            await history_service.log_completed_once(session, update.effective_user.id, "full")
+            await session_service.advance_to(
+                session,
+                SessionState.COMPLETED,
+                delivery_mode="full",
+                history_logged=session.history_logged,
             )
             return
 
-        # mode == "interactive"
-        session.current_step_index = 0
+        # mode == "interactive": start fresh from step 1 the first time, resume where the user
+        # left off if they're toggling back in from the full-recipe view.
+        if session.state == SessionState.AWAITING_DELIVERY_MODE:
+            session.current_step_index = 0
+
         await session_service.advance_to(
             session, SessionState.DELIVERING_INTERACTIVE, delivery_mode="interactive"
         )

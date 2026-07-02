@@ -1,5 +1,6 @@
 from unittest.mock import AsyncMock
 
+from app.database.recipe_history_repository import RecipeHistoryRepository
 from app.database.session_repository import SessionRepository
 from app.handlers.interactive_handler import (
     build_step_keyboard,
@@ -98,8 +99,32 @@ async def test_done_on_last_step_completes_cooking(context_with_db, session_fact
 
     async with session_factory() as db_session:
         session = await SessionRepository(db_session).get_by_chat_id(5)
+        history = await RecipeHistoryRepository(db_session).list_for_user(456)
 
     assert session.state == SessionState.COMPLETED
+    assert session.history_logged is True
+    assert len(history) == 1
+
+
+async def test_done_on_last_step_skips_history_if_already_logged(context_with_db, session_factory):
+    async with session_factory() as db_session:
+        await SessionRepository(db_session).upsert(
+            SessionData(
+                chat_id=11,
+                state=SessionState.DELIVERING_INTERACTIVE,
+                final_recipe=_final_recipe(),
+                current_step_index=2,
+                history_logged=True,
+            )
+        )
+    update = make_callback_update("step:done", chat_id=11)
+
+    await handle_step_navigation(update, context_with_db)
+
+    async with session_factory() as db_session:
+        history = await RecipeHistoryRepository(db_session).list_for_user(456)
+
+    assert history == []
 
 
 async def test_rejects_when_not_delivering_interactive(context_with_db, session_factory):
@@ -140,6 +165,14 @@ def test_build_step_keyboard_always_includes_why_button():
     buttons = [button.callback_data for row in keyboard.inline_keyboard for button in row]
 
     assert "step:why" in buttons
+
+
+def test_build_step_keyboard_always_includes_switch_to_full_button():
+    session = SessionData(chat_id=1, final_recipe=_final_recipe(), current_step_index=0)
+    keyboard = build_step_keyboard(session)
+    buttons = [button.callback_data for row in keyboard.inline_keyboard for button in row]
+
+    assert "mode:full" in buttons
 
 
 async def test_why_answers_with_explanation_alert_and_does_not_change_state(

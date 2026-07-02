@@ -44,6 +44,14 @@ TRANSIENT_STATES = {
     SessionState.GENERATING_FINAL_RECIPE,
 }
 
+# States from which the user is allowed to switch delivery mode (full <-> interactive) via the
+# mode:full / mode:interactive callbacks, as long as a final_recipe already exists.
+MODE_SWITCHABLE_STATES = {
+    SessionState.AWAITING_DELIVERY_MODE,
+    SessionState.DELIVERING_INTERACTIVE,
+    SessionState.COMPLETED,
+}
+
 
 class ChecklistItem(BaseModel):
     name: str
@@ -70,6 +78,7 @@ class SessionData(BaseModel):
     final_recipe: FinalRecipe | None = None
     delivery_mode: Literal["full", "interactive"] | None = None
     current_step_index: int = 0
+    history_logged: bool = False
 
     last_bot_message_id: int | None = None
     updated_at: datetime = Field(default_factory=datetime.utcnow)
