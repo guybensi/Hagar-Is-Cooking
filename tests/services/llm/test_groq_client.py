@@ -1,8 +1,10 @@
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from pydantic import BaseModel
 
+from app.models.recipe import ExtractedRecipe
 from app.services.llm.groq_client import GroqClient, LLMStructuringError
 
 
@@ -73,3 +75,21 @@ async def test_normalize_dish_query_returns_search_query_string(groq_client):
     result = await groq_client.normalize_dish_query("בא לי משהו עם פסטה ועגבניות")
 
     assert result == "פסטה ברוטב עגבניות"
+
+
+async def test_structure_recipe_returns_structured_recipe(groq_client):
+    groq_client._client.chat.completions.create.return_value = _fake_completion(
+        '{"recipe_name": "שניצל", "ingredients": [{"name": "עוף", "amount": "500 גרם"}], '
+        '"instructions": ["לטגן"]}'
+    )
+    extracted = ExtractedRecipe(
+        source_url="https://www.mako.co.il/food/a",
+        title="שניצל",
+        raw_text="...",
+        fetched_at=datetime.utcnow(),
+    )
+
+    result = await groq_client.structure_recipe(extracted)
+
+    assert result.recipe_name == "שניצל"
+    assert result.ingredients[0].name == "עוף"

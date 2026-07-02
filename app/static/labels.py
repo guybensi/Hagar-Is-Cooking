@@ -1,4 +1,4 @@
-from app.static.emojis import COOKING, ERROR, PLATE, SEARCH
+from app.static.emojis import BOOK, CHECKED, COOKING, ERROR, PLATE, SEARCH
 
 WELCOME_MESSAGE = (
     f"שלום! {COOKING}\n"
@@ -34,3 +34,13 @@ SEARCH_FAILED_MESSAGE = f"משהו השתבש בחיפוש המתכונים {ERR
 AWAITING_QUERY_NUDGE = "אני עדיין מחכה/ת שתבחר/י אחת מהאפשרויות למעלה 👆"
 
 EMPTY_QUERY_MESSAGE = "לא הצלחתי להבין איזו מנה בא לך 🤔 אפשר לנסות לתאר אותה במילים אחרות?"
+
+LOADING_RECIPE_MESSAGE = f"{BOOK} טוען ומעבד את המתכון..."
+
+EXTRACTION_FAILED_MESSAGE = "לא הצלחתי לטעון את עמוד המתכון 😅 אפשר לנסות מתכון אחר?"
+
+STRUCTURING_FAILED_MESSAGE = "התקשיתי להבין את המתכון הזה 😅 אפשר לנסות מתכון אחר?"
+
+STALE_SELECTION_MESSAGE = f"האפשרות הזו כבר לא זמינה. אפשר להתחיל חיפוש חדש {SEARCH}"
+
+CHECKLIST_STUB_INTRO = f"מצאתי את המתכון! הנה רשימת המצרכים {CHECKED}"

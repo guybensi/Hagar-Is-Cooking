@@ -9,7 +9,8 @@ from groq import (
 )
 from pydantic import BaseModel, ValidationError
 
-from app.prompts import normalize_query
+from app.models.recipe import ExtractedRecipe, StructuredRecipe
+from app.prompts import normalize_query, structure_recipe
 from app.services.llm.schema_builder import build_json_schema_response_format
 from app.utils.logging import get_logger
 from app.utils.retry import retry_transient_errors
@@ -93,3 +94,11 @@ class GroqClient:
             response_model=_NormalizedQuery,
         )
         return result.search_query
+
+    async def structure_recipe(self, extracted: ExtractedRecipe) -> StructuredRecipe:
+        result = await self._structured_completion(
+            system_prompt=structure_recipe.SYSTEM_PROMPT,
+            user_prompt=structure_recipe.build_user_prompt(extracted),
+            response_model=StructuredRecipe,
+        )
+        return result
