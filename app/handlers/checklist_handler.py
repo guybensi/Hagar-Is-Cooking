@@ -16,7 +16,7 @@ from app.services.session_service import SessionService
 from app.services.substitution_service import SubstitutionDecisionError
 from app.static import labels
 from app.static.emojis import CHECKED, PLATE, UNCHECKED
-from app.utils.logging import get_logger
+from app.utils.logging import bind_chat_context, get_logger
 from app.utils.telegram_helpers import typing_action
 from app.utils.text import truncate
 
@@ -42,6 +42,7 @@ async def handle_toggle(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     await query.answer()
 
     chat_id = update.effective_chat.id
+    bind_chat_context(chat_id)
     idx = int(query.data.split(":", 1)[1])
 
     session_factory = context.bot_data["session_factory"]
@@ -71,6 +72,7 @@ async def handle_finished(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     await query.answer()
 
     chat_id = update.effective_chat.id
+    bind_chat_context(chat_id)
     session_factory = context.bot_data["session_factory"]
 
     async with session_scope(session_factory) as db_session:

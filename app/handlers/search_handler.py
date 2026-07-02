@@ -8,21 +8,21 @@ from app.models.session import QUERY_ACCEPTING_STATES, SessionState
 from app.services.session_service import SessionService
 from app.static import labels
 from app.static.emojis import PASTA
-from app.utils.logging import get_logger
+from app.utils.logging import bind_chat_context, get_logger
 from app.utils.telegram_helpers import typing_action
 from app.utils.text import truncate
 
 logger = get_logger(__name__)
 
 
-def _build_results_message(results: list[SearchResult]) -> str:
+def build_results_message(results: list[SearchResult]) -> str:
     lines = [labels.SEARCH_RESULTS_INTRO.format(count=len(results)), ""]
     lines += [f"{PASTA} {truncate(result.title)}" for result in results]
     lines += ["", labels.SEARCH_RESULTS_PROMPT]
     return "\n".join(lines)
 
 
-def _build_results_keyboard(results: list[SearchResult]) -> InlineKeyboardMarkup:
+def build_results_keyboard(results: list[SearchResult]) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
             [
@@ -38,6 +38,7 @@ def _build_results_keyboard(results: list[SearchResult]) -> InlineKeyboardMarkup
 async def handle_free_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Entry point for step 1-3: understand the dish, search mako.co.il, show results."""
     chat_id = update.effective_chat.id
+    bind_chat_context(chat_id)
     user_text = (update.message.text or "").strip()
 
     session_factory = context.bot_data["session_factory"]
@@ -81,8 +82,8 @@ async def handle_free_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             return
 
         await loading_message.edit_text(
-            _build_results_message(results),
-            reply_markup=_build_results_keyboard(results),
+            build_results_message(results),
+            reply_markup=build_results_keyboard(results),
         )
 
         await session_service.advance_to(

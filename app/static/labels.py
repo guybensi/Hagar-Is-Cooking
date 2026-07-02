@@ -103,3 +103,5 @@ COOKING_COMPLETE_MESSAGE = "🎉 כל הכבוד! סיימת לבשל את {reci
 WHY_BUTTON = f"{BULB} למה?"
 
 EXPLANATION_FAILED_MESSAGE = "לא הצלחתי להסביר את השלב הזה כרגע 😅"
+
+RESUME_PROMPT = "ברוך שובך! ממשיכים בדיוק מאיפה שעצרנו 👇"

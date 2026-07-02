@@ -2,14 +2,16 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
 from app.database.engine import session_scope
+from app.database.recipe_history_repository import RecipeHistoryRepository
 from app.database.session_repository import SessionRepository
 from app.handlers.interactive_handler import render_step
 from app.models.recipe import FinalRecipe
 from app.models.session import SessionState
+from app.services.recipe_history_service import RecipeHistoryService
 from app.services.session_service import SessionService
 from app.static import labels
 from app.static.emojis import CHECKED, PLATE
-from app.utils.logging import get_logger
+from app.utils.logging import bind_chat_context, get_logger
 
 logger = get_logger(__name__)
 
@@ -49,6 +51,7 @@ async def handle_mode_choice(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await query.answer()
 
     chat_id = update.effective_chat.id
+    bind_chat_context(chat_id)
     mode = query.data.split(":", 1)[1]
 
     session_factory = context.bot_data["session_factory"]
@@ -64,6 +67,10 @@ async def handle_mode_choice(update: Update, context: ContextTypes.DEFAULT_TYPE)
             await query.edit_message_text(build_full_recipe_message(session.final_recipe))
             await session_service.advance_to(
                 session, SessionState.COMPLETED, delivery_mode="full"
+            )
+            source_url = session.extracted_recipe.source_url if session.extracted_recipe else None
+            await RecipeHistoryService(RecipeHistoryRepository(db_session)).log_completed(
+                update.effective_user.id, session.final_recipe, source_url, "full"
             )
             return
 

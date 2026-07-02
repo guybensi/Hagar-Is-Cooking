@@ -10,7 +10,7 @@ from app.models.substitution import SubstitutionAction, SubstitutionDecision
 from app.services.final_recipe_service import FinalRecipeGenerationError
 from app.services.session_service import SessionService
 from app.static import labels
-from app.utils.logging import get_logger
+from app.utils.logging import bind_chat_context, get_logger
 from app.utils.telegram_helpers import typing_action
 
 logger = get_logger(__name__)
@@ -101,6 +101,7 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     await query.answer()
 
     chat_id = update.effective_chat.id
+    bind_chat_context(chat_id)
     _, index_str, answer_str = query.data.split(":")
     index = int(index_str)
     accepted = answer_str == "yes"

@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock
 
 import pytest
+import requests
 
 from app.services.recipe_search_service import RecipeSearchError, RecipeSearchService
 
@@ -68,3 +69,24 @@ async def test_search_recipes_raises_recipe_search_error_on_client_failure(servi
 
     with pytest.raises(RecipeSearchError):
         await service.search_recipes("שניצל")
+
+
+async def test_search_recipes_retries_on_transient_connection_error_then_succeeds(service):
+    service._client.search.side_effect = [
+        requests.exceptions.ConnectionError("network blip"),
+        {"results": [{"title": "שניצל", "url": "https://www.mako.co.il/food/a", "content": ""}]},
+    ]
+
+    results = await service.search_recipes("שניצל")
+
+    assert len(results) == 1
+    assert service._client.search.call_count == 2
+
+
+async def test_search_recipes_retries_on_timeout_error_then_gives_up(service):
+    service._client.search.side_effect = TimeoutError("timed out")
+
+    with pytest.raises(RecipeSearchError):
+        await service.search_recipes("שניצל")
+
+    assert service._client.search.call_count == 3

@@ -33,6 +33,17 @@ QUERY_ACCEPTING_STATES = {
     SessionState.COMPLETED,
 }
 
+# States that mark "mid external call" (Groq/Tavily/httpx in flight). A crash or restart while
+# in one of these can never be resumed -- there is no in-progress request to reconnect to -- so
+# the safest recovery is to reset back to IDLE rather than leave the user stranded.
+TRANSIENT_STATES = {
+    SessionState.SEARCHING,
+    SessionState.EXTRACTING,
+    SessionState.STRUCTURING,
+    SessionState.DECIDING_SUBSTITUTIONS,
+    SessionState.GENERATING_FINAL_RECIPE,
+}
+
 
 class ChecklistItem(BaseModel):
     name: str

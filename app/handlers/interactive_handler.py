@@ -2,12 +2,14 @@ from telegram import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, 
 from telegram.ext import ContextTypes
 
 from app.database.engine import session_scope
+from app.database.recipe_history_repository import RecipeHistoryRepository
 from app.database.session_repository import SessionRepository
 from app.models.session import SessionData, SessionState
 from app.services.explanation_service import ExplanationError
+from app.services.recipe_history_service import RecipeHistoryService
 from app.services.session_service import SessionService
 from app.static import labels
-from app.utils.logging import get_logger
+from app.utils.logging import bind_chat_context, get_logger
 from app.utils.text import truncate
 
 logger = get_logger(__name__)
@@ -58,6 +60,7 @@ async def handle_step_navigation(update: Update, context: ContextTypes.DEFAULT_T
     await query.answer()
 
     chat_id = update.effective_chat.id
+    bind_chat_context(chat_id)
     action = query.data.split(":", 1)[1]
 
     session_factory = context.bot_data["session_factory"]
@@ -81,6 +84,10 @@ async def handle_step_navigation(update: Update, context: ContextTypes.DEFAULT_T
                 labels.COOKING_COMPLETE_MESSAGE.format(recipe_name=session.final_recipe.recipe_name)
             )
             await session_service.advance_to(session, SessionState.COMPLETED)
+            source_url = session.extracted_recipe.source_url if session.extracted_recipe else None
+            await RecipeHistoryService(RecipeHistoryRepository(db_session)).log_completed(
+                update.effective_user.id, session.final_recipe, source_url, "interactive"
+            )
             return
 
         session.current_step_index += 1
@@ -95,6 +102,7 @@ async def handle_why(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     """
     query = update.callback_query
     chat_id = update.effective_chat.id
+    bind_chat_context(chat_id)
 
     session_factory = context.bot_data["session_factory"]
     async with session_scope(session_factory) as db_session:

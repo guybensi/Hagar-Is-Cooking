@@ -1,7 +1,7 @@
 import asyncio
 from urllib.parse import urlparse
 
-import httpx
+import requests
 from tavily import TavilyClient
 
 from app.models.search import SearchResult
@@ -24,7 +24,7 @@ class RecipeSearchService:
     def __init__(self, api_key: str) -> None:
         self._client = TavilyClient(api_key=api_key)
 
-    @retry_transient_errors(httpx.HTTPError, ConnectionError)
+    @retry_transient_errors(requests.exceptions.RequestException, TimeoutError)
     async def _search(self, query: str) -> dict:
         return await asyncio.to_thread(
             self._client.search, query=query, max_results=MAX_RESULTS

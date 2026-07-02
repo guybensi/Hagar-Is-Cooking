@@ -9,7 +9,7 @@ from app.services.recipe_extraction_service import RecipeExtractionError
 from app.services.recipe_structuring_service import RecipeStructuringError
 from app.services.session_service import SessionService
 from app.static import labels
-from app.utils.logging import get_logger
+from app.utils.logging import bind_chat_context, get_logger
 from app.utils.telegram_helpers import typing_action
 
 logger = get_logger(__name__)
@@ -21,6 +21,7 @@ async def handle_recipe_selection(update: Update, context: ContextTypes.DEFAULT_
     await query.answer()
 
     chat_id = update.effective_chat.id
+    bind_chat_context(chat_id)
     selected_index = int(query.data.split(":", 1)[1])
 
     session_factory = context.bot_data["session_factory"]

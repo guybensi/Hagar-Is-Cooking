@@ -28,3 +28,13 @@ def configure_logging(log_level: str = "INFO") -> None:
 
 def get_logger(name: str) -> structlog.BoundLogger:
     return structlog.get_logger(name)
+
+
+def bind_chat_context(chat_id: int) -> None:
+    """Bind chat_id to structlog's contextvars so every log line for this update includes it.
+
+    Each incoming Telegram update is processed in its own asyncio Task by python-telegram-bot,
+    so contextvars-based binding is naturally isolated per update -- no explicit teardown needed.
+    """
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(chat_id=chat_id)
