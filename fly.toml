@@ -1,22 +1,29 @@
-# Fly.io app config for Hagar Is Cooking.
-# App name must be globally unique on Fly -- change it if "hagar-is-cooking" is taken
-# (`fly apps create <name>` will tell you, or just edit this file before `fly launch`).
-app = "hagar-is-cooking"
-primary_region = "iad"
+# fly.toml app configuration file generated for hagar-is-cooking on 2026-07-02T13:16:51Z
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'hagar-is-cooking'
+primary_region = 'ams'
 
 [build]
 
 [env]
-  DATABASE_PATH = "/data/hagar_is_cooking.db"
-  LOG_LEVEL = "INFO"
+  DATABASE_PATH = '/data/hagar_is_cooking.db'
+  LOG_LEVEL = 'INFO'
 
-# TELEGRAM_BOT_TOKEN / GROQ_API_KEY / TAVILY_API_KEY are NOT set here -- they're secrets,
-# set once via `fly secrets set NAME=value` (see README).
+[[mounts]]
+  source = 'hagar_data'
+  destination = '/data'
 
-[mounts]
-  source = "hagar_data"
-  destination = "/data"
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
 
 [[vm]]
-  size = "shared-cpu-1x"
-  memory = "256mb"
+  size = 'shared-cpu-1x'
+  memory = '256mb'
