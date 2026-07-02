@@ -1,4 +1,5 @@
-from app.bot.error_handler import GENERIC_ERROR_MESSAGE, handle_error
+from app.bot.error_handler import handle_error
+from app.static import labels
 from tests.conftest import make_context, make_update
 
 
@@ -9,7 +10,9 @@ async def test_handle_error_sends_hebrew_message_to_effective_chat():
 
     await handle_error(update, context)
 
-    context.bot.send_message.assert_awaited_once_with(chat_id=999, text=GENERIC_ERROR_MESSAGE)
+    context.bot.send_message.assert_awaited_once_with(
+        chat_id=999, text=labels.GENERIC_ERROR_MESSAGE
+    )
 
 
 async def test_handle_error_swallows_failure_to_notify_user():

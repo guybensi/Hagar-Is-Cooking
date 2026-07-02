@@ -60,4 +60,13 @@ def make_context() -> MagicMock:
     context.bot.edit_message_text = AsyncMock()
     context.user_data = {}
     context.chat_data = {}
+    context.bot_data = {}
+    return context
+
+
+@pytest.fixture
+def context_with_db(session_factory) -> MagicMock:
+    """A fake handler context pre-wired with a real (in-memory) session_factory."""
+    context = make_context()
+    context.bot_data["session_factory"] = session_factory
     return context

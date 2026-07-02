@@ -1,11 +1,10 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
+from app.static import labels
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
-
-GENERIC_ERROR_MESSAGE = "אופס, קרתה תקלה 😅 אפשר לנסות שוב?"
 
 
 async def handle_error(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -19,7 +18,7 @@ async def handle_error(update: object, context: ContextTypes.DEFAULT_TYPE) -> No
     if isinstance(update, Update) and update.effective_chat is not None:
         try:
             await context.bot.send_message(
-                chat_id=update.effective_chat.id, text=GENERIC_ERROR_MESSAGE
+                chat_id=update.effective_chat.id, text=labels.GENERIC_ERROR_MESSAGE
             )
         except Exception:
             logger.error("failed_to_send_error_message", exc_info=True)
