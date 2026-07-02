@@ -1,5 +1,8 @@
 # Hagar Is Cooking 🍳
 
+🤖 **Try it now on Telegram:** [@Hagar_Is_Cooking_bot](http://t.me/Hagar_Is_Cooking_bot) — live,
+public, free to use.
+
 A Telegram AI cooking assistant, in Hebrew, that turns "אני רוצה פסטה" into a complete,
 ingredient-aware cooking session:
 
