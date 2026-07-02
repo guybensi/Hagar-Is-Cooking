@@ -25,6 +25,11 @@ uv run ruff check --fix .            # lint, auto-fixing what's fixable
 CI (`.github/workflows/ci.yml`) runs `ruff check .` and `pytest` on every push and PR. There are
 no live-API integration tests — everything is mocked, so CI needs no secrets.
 
+Cloud deployment (Fly.io) uses `Dockerfile` + `fly.toml` at the repo root; see the "Deploying to
+Fly.io" section in `README.md` for the full `fly launch`/`volumes create`/`secrets set`/`deploy`
+runbook. No webhook server — the bot still uses long polling, so only process uptime + env vars
+matter, not a public endpoint.
+
 ## Architecture
 
 ### Custom FSM, not `ConversationHandler`
@@ -66,14 +71,39 @@ The import graph is one-directional (`start_handler` → everything; `checklist_
 `substitution_handler` → `delivery_handler` → `interactive_handler`) — nothing imports back
 toward `start_handler`, so there are no cycles. Keep new handlers consistent with this direction.
 
-### Extraction is scrape-only; structuring is LLM-only
+### Delivery mode is switchable, not one-shot
 
-`recipe_extraction_service.py` fetches the mako.co.il page and strips ads/nav/scripts (tag-name
-and class/id-keyword heuristics), but does **not** attempt to split ingredients from
-instructions — that's delegated entirely to a single Groq call
-(`recipe_structuring_service` → `GroqClient.structure_recipe`). Don't add HTML-structure-specific
-parsing for ingredients/instructions; if extraction quality is bad, the fix belongs in the
-prompt or the denoising heuristics, not in new scraping logic.
+`mode:full` / `mode:interactive` aren't just the initial delivery choice — the same two
+callbacks are reused as toggle buttons on the full-recipe message and on every interactive step,
+so the user can flip between views freely. `delivery_handler.handle_mode_choice` accepts them
+from any state in `MODE_SWITCHABLE_STATES` (`AWAITING_DELIVERY_MODE`, `DELIVERING_INTERACTIVE`,
+`COMPLETED`), not just the first choice, and switching into interactive resumes at
+`session.current_step_index` rather than restarting at step 1. Because `COMPLETED` is reachable
+this way from multiple paths (full mode, or finishing all interactive steps),
+`RecipeHistoryService.log_completed_once` gates on `SessionData.history_logged` so toggling back
+and forth doesn't write duplicate `recipe_history` rows.
+
+### Cancel is always one tap away
+
+Every in-flow keyboard (search results, checklist, substitution question, delivery mode, full
+recipe, interactive steps) ends with a row from `utils/telegram_helpers.cancel_row()`, wired to a
+single `cancel` callback (`start_handler.handle_cancel_callback`) that resets the session
+unconditionally — no state check needed, since resetting is always safe. Add `cancel_row()` to
+any new in-flow keyboard's row list to keep this consistent.
+
+### Extraction is fetch-only; structuring is LLM-only
+
+`recipe_extraction_service.py` fetches and cleans the mako.co.il page via Tavily's `extract` API
+(`TavilyClient.extract(urls=url, format="text")` — the same Tavily account/key already used for
+search), not a hand-rolled scraper. An earlier version used raw `httpx` + BeautifulSoup, but
+mako.co.il was returning too little real content to that approach in production (likely
+anti-bot/JS rendering) — Tavily's extract endpoint handles it reliably. Either way, this service
+does **not** attempt to split ingredients from instructions — that's delegated entirely to a
+single Groq call (`recipe_structuring_service` → `GroqClient.structure_recipe`). Don't add
+structure-specific parsing for ingredients/instructions here; if extraction quality is bad, the
+fix belongs in the structuring prompt, not in new fetch/parsing logic. Raises
+`RecipeExtractionError` on a Tavily-side failure or an empty `results` list (checks
+`failed_results` for the reason before raising).
 
 ### Groq: strict structured outputs + two independent retry layers
 

@@ -4,15 +4,19 @@ A Telegram AI cooking assistant, in Hebrew, that turns "אני רוצה פסטה
 ingredient-aware cooking session:
 
 1. Understands what you feel like eating (free text, in Hebrew or mixed language).
-2. Searches **mako.co.il only** for matching recipes (via Tavily) and lets you pick one.
-3. Scrapes and cleans the recipe page, then asks Groq to structure it (name, ingredients,
-   instructions).
+2. Searches **mako.co.il only** for matching recipes (via Tavily) and lets you pick one — each
+   result also links straight to the original page.
+3. Fetches and cleans the recipe page (via Tavily's extract API), then asks Groq to structure it
+   (name, ingredients, instructions).
 4. Shows an interactive ☑/⬜ checklist so you can mark what you already have.
 5. For everything missing, Groq decides **BUY** / **SKIP** / **SUBSTITUTE** — and asks you to
    confirm any proposed substitutions.
 6. Generates a final recipe rewritten to match exactly what you have.
-7. Delivers it either as a full recipe message, or step-by-step with a 💡 "why?" button that
-   explains the reasoning behind each step.
+7. Delivers it either as a full recipe message or step-by-step with a 💡 "why?" button per step
+   — freely switchable between the two at any time.
+
+A ❌ cancel button is always available on every keyboard, so you can bail out and start a new
+dish at any point in the flow.
 
 Built with `python-telegram-bot`, the Groq API (structured JSON outputs), Tavily Search,
 SQLite (via SQLAlchemy async), and Pydantic — service-oriented, fully tested, with CI on every
@@ -121,12 +125,12 @@ app/
 │   └── error_handler.py     # global error boundary -> Hebrew friendly message + structured log
 ├── handlers/                # one module per stage of the conversation flow
 │   ├── registry.py          # registers every command/callback/message handler in one place
-│   ├── start_handler.py     # /start (incl. resume-on-restart), /help, /cancel
+│   ├── start_handler.py     # /start (incl. resume-on-restart), /help, /cancel + ❌ cancel button
 │   ├── search_handler.py    # free text -> Groq-normalized query -> Tavily search -> results
-│   ├── selection_handler.py # selected result -> scrape -> Groq-structure -> checklist
+│   ├── selection_handler.py # selected result -> extract -> Groq-structure -> checklist
 │   ├── checklist_handler.py # ☑/⬜ toggling, "finished" -> substitution decisions
 │   ├── substitution_handler.py # yes/no substitution Q&A -> final recipe generation
-│   ├── delivery_handler.py  # full-recipe vs. interactive mode choice + full recipe rendering
+│   ├── delivery_handler.py  # full-recipe/interactive mode choice + switching + full recipe view
 │   └── interactive_handler.py # step-by-step navigation + 💡 why explanations
 ├── services/                # business logic, one responsibility per service
 │   ├── recipe_search_service.py       # Tavily site:mako.co.il search
