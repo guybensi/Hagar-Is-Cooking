@@ -17,7 +17,7 @@ from app.services.substitution_service import SubstitutionDecisionError
 from app.static import labels
 from app.static.emojis import CHECKED, PLATE, UNCHECKED
 from app.utils.logging import bind_chat_context, get_logger
-from app.utils.telegram_helpers import typing_action
+from app.utils.telegram_helpers import cancel_row, typing_action
 from app.utils.text import truncate
 
 logger = get_logger(__name__)
@@ -34,6 +34,7 @@ def build_checklist_keyboard(checklist: list[ChecklistItem]) -> InlineKeyboardMa
         label = f"{icon} {item.name}" + (f" - {item.amount}" if item.amount else "")
         rows.append([InlineKeyboardButton(truncate(label, 60), callback_data=f"toggle:{idx}")])
     rows.append([InlineKeyboardButton(labels.FINISHED_BUTTON, callback_data="finished")])
+    rows.append(cancel_row())
     return InlineKeyboardMarkup(rows)
 
 

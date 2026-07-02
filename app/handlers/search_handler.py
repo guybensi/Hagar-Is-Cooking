@@ -9,7 +9,7 @@ from app.services.session_service import SessionService
 from app.static import labels
 from app.static.emojis import PASTA
 from app.utils.logging import bind_chat_context, get_logger
-from app.utils.telegram_helpers import typing_action
+from app.utils.telegram_helpers import cancel_row, typing_action
 from app.utils.text import truncate
 
 logger = get_logger(__name__)
@@ -23,16 +23,17 @@ def build_results_message(results: list[SearchResult]) -> str:
 
 
 def build_results_keyboard(results: list[SearchResult]) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
+    rows = [
         [
-            [
-                InlineKeyboardButton(
-                    f"{PASTA} {truncate(result.title, 40)}", callback_data=f"select:{idx}"
-                )
-            ]
-            for idx, result in enumerate(results)
+            InlineKeyboardButton(
+                f"{PASTA} {truncate(result.title, 28)}", callback_data=f"select:{idx}"
+            ),
+            InlineKeyboardButton(labels.ORIGINAL_RECIPE_LINK_BUTTON, url=str(result.url)),
         ]
-    )
+        for idx, result in enumerate(results)
+    ]
+    rows.append(cancel_row())
+    return InlineKeyboardMarkup(rows)
 
 
 async def handle_free_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

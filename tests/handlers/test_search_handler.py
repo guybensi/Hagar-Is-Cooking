@@ -1,7 +1,7 @@
 from unittest.mock import AsyncMock, MagicMock
 
 from app.database.session_repository import SessionRepository
-from app.handlers.search_handler import handle_free_text
+from app.handlers.search_handler import build_results_keyboard, handle_free_text
 from app.models.search import SearchResult
 from app.models.session import SessionData, SessionState
 from app.static import labels
@@ -129,3 +129,26 @@ async def test_normalize_failure_falls_back_to_raw_text(context_with_db):
     await handle_free_text(update, context_with_db)
 
     recipe_search_service.search_recipes.assert_awaited_once_with("בא לי שניצל")
+
+
+def test_build_results_keyboard_includes_select_and_link_buttons_per_result():
+    results = [
+        SearchResult(title="שניצל קלאסי", url="https://www.mako.co.il/food/a"),
+        SearchResult(title="שניצל בתנור", url="https://www.mako.co.il/food/b"),
+    ]
+
+    keyboard = build_results_keyboard(results)
+
+    assert len(keyboard.inline_keyboard) == 3  # 2 result rows + cancel row
+    first_row = keyboard.inline_keyboard[0]
+    assert first_row[0].callback_data == "select:0"
+    assert first_row[1].url == "https://www.mako.co.il/food/a"
+    assert first_row[1].text == labels.ORIGINAL_RECIPE_LINK_BUTTON
+
+    callback_data = [
+        button.callback_data
+        for row in keyboard.inline_keyboard
+        for button in row
+        if button.callback_data
+    ]
+    assert callback_data == ["select:0", "select:1", "cancel"]

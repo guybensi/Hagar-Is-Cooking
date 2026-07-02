@@ -161,4 +161,4 @@ def test_build_substitution_keyboard_has_yes_no_buttons_with_index():
     keyboard = build_substitution_keyboard(2)
     callback_data = [button.callback_data for row in keyboard.inline_keyboard for button in row]
 
-    assert callback_data == ["sub:2:yes", "sub:2:no"]
+    assert callback_data == ["sub:2:yes", "sub:2:no", "cancel"]

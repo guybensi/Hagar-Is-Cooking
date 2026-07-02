@@ -1,13 +1,13 @@
 from app.database.engine import session_scope
 from app.database.session_repository import SessionRepository
 from app.database.user_repository import UserRepository
-from app.handlers.start_handler import cancel, help_command, start
+from app.handlers.start_handler import cancel, handle_cancel_callback, help_command, start
 from app.models.recipe import FinalRecipe, Ingredient, StructuredRecipe
 from app.models.search import SearchResult
 from app.models.session import ChecklistItem, SessionData, SessionState
 from app.models.substitution import SubstitutionAction, SubstitutionAnswer, SubstitutionDecision
 from app.static import labels
-from tests.conftest import make_context, make_update
+from tests.conftest import make_callback_update, make_context, make_update
 
 
 async def test_start_replies_with_welcome_message(context_with_db, session_factory):
@@ -57,6 +57,24 @@ async def test_cancel_resets_session_to_idle(context_with_db, session_factory):
 
     async with session_scope(session_factory) as db_session:
         session = await SessionRepository(db_session).get_by_chat_id(555)
+
+    assert session.state == SessionState.IDLE
+
+
+async def test_cancel_button_resets_session_and_edits_message(context_with_db, session_factory):
+    update = make_callback_update("cancel", chat_id=556)
+
+    async with session_scope(session_factory) as db_session:
+        repo = SessionRepository(db_session)
+        await repo.upsert(SessionData(chat_id=556, state=SessionState.AWAITING_CHECKLIST))
+
+    await handle_cancel_callback(update, context_with_db)
+
+    update.callback_query.answer.assert_awaited_once()
+    update.callback_query.edit_message_text.assert_awaited_once_with(labels.CANCEL_MESSAGE)
+
+    async with session_scope(session_factory) as db_session:
+        session = await SessionRepository(db_session).get_by_chat_id(556)
 
     assert session.state == SessionState.IDLE
 

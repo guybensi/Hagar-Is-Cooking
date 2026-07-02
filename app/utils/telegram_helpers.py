@@ -1,13 +1,24 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from telegram import InlineKeyboardMarkup, Message
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Message
 from telegram.constants import ChatAction
 from telegram.ext import ContextTypes
 
+from app.static import labels
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
+
+
+def cancel_row() -> list[InlineKeyboardButton]:
+    """A keyboard row offering to cancel whatever's in progress and start a new recipe.
+
+    Appended to every in-flow keyboard (search results, checklist, substitution questions,
+    delivery mode, full recipe, interactive steps) so the user can always bail out, regardless
+    of which step they're on.
+    """
+    return [InlineKeyboardButton(labels.CANCEL_BUTTON, callback_data="cancel")]
 
 
 async def edit_or_send(

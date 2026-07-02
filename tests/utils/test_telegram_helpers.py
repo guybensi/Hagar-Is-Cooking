@@ -1,6 +1,7 @@
 from telegram.constants import ChatAction
 
-from app.utils.telegram_helpers import edit_or_send, typing_action
+from app.static import labels
+from app.utils.telegram_helpers import cancel_row, edit_or_send, typing_action
 from tests.conftest import make_context
 
 
@@ -40,3 +41,11 @@ async def test_typing_action_sends_typing_chat_action():
         pass
 
     context.bot.send_chat_action.assert_awaited_once_with(chat_id=1, action=ChatAction.TYPING)
+
+
+def test_cancel_row_has_cancel_callback_data():
+    row = cancel_row()
+
+    assert len(row) == 1
+    assert row[0].callback_data == "cancel"
+    assert row[0].text == labels.CANCEL_BUTTON

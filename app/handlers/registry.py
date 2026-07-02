@@ -50,6 +50,9 @@ def register_handlers(application: Application) -> None:
     application.add_handler(
         CallbackQueryHandler(interactive_handler.handle_why, pattern=r"^step:why$")
     )
+    application.add_handler(
+        CallbackQueryHandler(start_handler.handle_cancel_callback, pattern=r"^cancel$")
+    )
 
     application.add_handler(
         MessageHandler(filters.TEXT & ~filters.COMMAND, search_handler.handle_free_text)

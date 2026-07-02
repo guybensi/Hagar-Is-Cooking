@@ -7,6 +7,7 @@ from app.static.emojis import (
     DOCUMENT,
     DONE,
     ERROR,
+    LINK,
     PLATE,
     PREVIOUS,
     SEARCH,
@@ -105,3 +106,7 @@ WHY_BUTTON = f"{BULB} למה?"
 EXPLANATION_FAILED_MESSAGE = "לא הצלחתי להסביר את השלב הזה כרגע 😅"
 
 RESUME_PROMPT = "ברוך שובך! ממשיכים בדיוק מאיפה שעצרנו 👇"
+
+CANCEL_BUTTON = "❌ ביטול / מתכון חדש"
+
+ORIGINAL_RECIPE_LINK_BUTTON = f"{LINK} למתכון המקורי"

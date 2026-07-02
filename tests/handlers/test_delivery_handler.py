@@ -123,7 +123,7 @@ async def test_switch_from_interactive_to_full_shows_toggle_button(
     assert "שניצל עוף מותאם" in call.args[0]
     keyboard = call.kwargs["reply_markup"]
     callback_data = [button.callback_data for row in keyboard.inline_keyboard for button in row]
-    assert callback_data == ["mode:interactive"]
+    assert callback_data == ["mode:interactive", "cancel"]
 
     async with session_factory() as db_session:
         session = await SessionRepository(db_session).get_by_chat_id(6)
@@ -202,11 +202,11 @@ def test_build_delivery_mode_keyboard_has_both_modes():
     keyboard = build_delivery_mode_keyboard()
     callback_data = [button.callback_data for row in keyboard.inline_keyboard for button in row]
 
-    assert callback_data == ["mode:interactive", "mode:full"]
+    assert callback_data == ["mode:interactive", "mode:full", "cancel"]
 
 
 def test_build_full_recipe_keyboard_offers_switch_to_interactive():
     keyboard = build_full_recipe_keyboard()
     callback_data = [button.callback_data for row in keyboard.inline_keyboard for button in row]
 
-    assert callback_data == ["mode:interactive"]
+    assert callback_data == ["mode:interactive", "cancel"]

@@ -11,7 +11,7 @@ from app.services.final_recipe_service import FinalRecipeGenerationError
 from app.services.session_service import SessionService
 from app.static import labels
 from app.utils.logging import bind_chat_context, get_logger
-from app.utils.telegram_helpers import typing_action
+from app.utils.telegram_helpers import cancel_row, typing_action
 
 logger = get_logger(__name__)
 
@@ -39,6 +39,7 @@ def build_substitution_keyboard(index: int) -> InlineKeyboardMarkup:
                     labels.SUBSTITUTION_NO_BUTTON, callback_data=f"sub:{index}:no"
                 )
             ],
+            cancel_row(),
         ]
     )
 

@@ -10,6 +10,7 @@ from app.services.recipe_history_service import RecipeHistoryService
 from app.services.session_service import SessionService
 from app.static import labels
 from app.utils.logging import bind_chat_context, get_logger
+from app.utils.telegram_helpers import cancel_row
 from app.utils.text import truncate
 
 logger = get_logger(__name__)
@@ -41,7 +42,11 @@ def build_step_keyboard(session: SessionData) -> InlineKeyboardMarkup:
     )
     row.append(InlineKeyboardButton(labels.WHY_BUTTON, callback_data="step:why"))
     return InlineKeyboardMarkup(
-        [row, [InlineKeyboardButton(labels.FULL_RECIPE_MODE_BUTTON, callback_data="mode:full")]]
+        [
+            row,
+            [InlineKeyboardButton(labels.FULL_RECIPE_MODE_BUTTON, callback_data="mode:full")],
+            cancel_row(),
+        ]
     )
 
 

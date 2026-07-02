@@ -12,6 +12,7 @@ from app.services.session_service import SessionService
 from app.static import labels
 from app.static.emojis import CHECKED, PLATE
 from app.utils.logging import bind_chat_context, get_logger
+from app.utils.telegram_helpers import cancel_row
 
 logger = get_logger(__name__)
 
@@ -25,6 +26,7 @@ def build_delivery_mode_keyboard() -> InlineKeyboardMarkup:
                 )
             ],
             [InlineKeyboardButton(labels.FULL_RECIPE_MODE_BUTTON, callback_data="mode:full")],
+            cancel_row(),
         ]
     )
 
@@ -37,7 +39,8 @@ def build_full_recipe_keyboard() -> InlineKeyboardMarkup:
                 InlineKeyboardButton(
                     labels.INTERACTIVE_MODE_BUTTON, callback_data="mode:interactive"
                 )
-            ]
+            ],
+            cancel_row(),
         ]
     )
 

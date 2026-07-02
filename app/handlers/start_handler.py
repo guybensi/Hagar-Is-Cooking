@@ -99,3 +99,23 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await SessionService(SessionRepository(db_session)).reset(chat_id)
 
     await update.message.reply_text(labels.CANCEL_MESSAGE)
+
+
+async def handle_cancel_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Entry point for the ❌ cancel button shown on every in-flow keyboard.
+
+    Same effect as the /cancel command, just reachable from a button tap at any point in the
+    flow instead of typing a command.
+    """
+    query = update.callback_query
+    await query.answer()
+
+    chat_id = update.effective_chat.id
+    bind_chat_context(chat_id)
+    logger.info("cancel_button_pressed", chat_id=chat_id)
+
+    session_factory = context.bot_data["session_factory"]
+    async with session_scope(session_factory) as db_session:
+        await SessionService(SessionRepository(db_session)).reset(chat_id)
+
+    await query.edit_message_text(labels.CANCEL_MESSAGE)

@@ -14,7 +14,7 @@ def test_register_handlers_wires_expected_handler_types():
     message_handlers = [h for h in handlers if isinstance(h, MessageHandler)]
 
     assert len(command_handlers) == 3
-    assert len(callback_handlers) == 7
+    assert len(callback_handlers) == 8
     assert len(message_handlers) == 1
     assert len(handlers) == len(command_handlers) + len(callback_handlers) + len(message_handlers)
 
