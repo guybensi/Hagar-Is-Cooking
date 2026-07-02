@@ -4,11 +4,15 @@ from telegram.ext import ContextTypes
 from app.database.engine import session_scope
 from app.database.session_repository import SessionRepository
 from app.models.session import SessionData, SessionState
+from app.services.explanation_service import ExplanationError
 from app.services.session_service import SessionService
 from app.static import labels
 from app.utils.logging import get_logger
+from app.utils.text import truncate
 
 logger = get_logger(__name__)
+
+_MAX_ALERT_LENGTH = 200
 
 
 def build_step_message(session: SessionData) -> str:
@@ -33,6 +37,7 @@ def build_step_keyboard(session: SessionData) -> InlineKeyboardMarkup:
             callback_data="step:done",
         )
     )
+    row.append(InlineKeyboardButton(labels.WHY_BUTTON, callback_data="step:why"))
     return InlineKeyboardMarkup([row])
 
 
@@ -80,3 +85,34 @@ async def handle_step_navigation(update: Update, context: ContextTypes.DEFAULT_T
 
         session.current_step_index += 1
         await render_step(query, session_service, session)
+
+
+async def handle_why(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Entry point for the 💡 button: explain why the current step matters.
+
+    Answers the callback with a Telegram alert popup rather than editing the message, so the
+    user is returned to exactly the same step afterwards with no extra round trip needed.
+    """
+    query = update.callback_query
+    chat_id = update.effective_chat.id
+
+    session_factory = context.bot_data["session_factory"]
+    async with session_scope(session_factory) as db_session:
+        session_service = SessionService(SessionRepository(db_session))
+        session = await session_service.load_or_create(chat_id)
+
+        if session.state != SessionState.DELIVERING_INTERACTIVE or session.final_recipe is None:
+            await query.answer(labels.STALE_SELECTION_MESSAGE, show_alert=True)
+            return
+
+        explanation_service = context.bot_data["explanation_service"]
+        try:
+            explanation = await explanation_service.explain(
+                session.final_recipe, session.current_step_index
+            )
+        except ExplanationError:
+            logger.error("step_explanation_failed", chat_id=chat_id, exc_info=True)
+            await query.answer(labels.EXPLANATION_FAILED_MESSAGE, show_alert=True)
+            return
+
+        await query.answer(truncate(explanation, _MAX_ALERT_LENGTH), show_alert=True)

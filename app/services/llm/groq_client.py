@@ -13,6 +13,7 @@ from app.models.recipe import ExtractedRecipe, FinalRecipe, Ingredient, Structur
 from app.models.substitution import SubstitutionDecision, SubstitutionDecisionList
 from app.prompts import (
     decide_substitutions,
+    explain_step,
     normalize_query,
     rewrite_final_recipe,
     structure_recipe,
@@ -32,6 +33,10 @@ class LLMStructuringError(Exception):
 
 class _NormalizedQuery(BaseModel):
     search_query: str
+
+
+class _StepExplanation(BaseModel):
+    explanation: str
 
 
 class GroqClient:
@@ -134,3 +139,11 @@ class GroqClient:
             response_model=FinalRecipe,
         )
         return result
+
+    async def explain_step(self, recipe: FinalRecipe, step_index: int) -> str:
+        result = await self._structured_completion(
+            system_prompt=explain_step.SYSTEM_PROMPT,
+            user_prompt=explain_step.build_user_prompt(recipe, step_index),
+            response_model=_StepExplanation,
+        )
+        return result.explanation

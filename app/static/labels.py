@@ -99,3 +99,7 @@ DONE_STEP_BUTTON = f"{DONE} בוצע"
 FINISH_COOKING_BUTTON = f"{DONE} סיימתי לבשל!"
 
 COOKING_COMPLETE_MESSAGE = "🎉 כל הכבוד! סיימת לבשל את {recipe_name}. בתאבון! 😋"
+
+WHY_BUTTON = f"{BULB} למה?"
+
+EXPLANATION_FAILED_MESSAGE = "לא הצלחתי להסביר את השלב הזה כרגע 😅"

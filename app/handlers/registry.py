@@ -47,6 +47,9 @@ def register_handlers(application: Application) -> None:
             interactive_handler.handle_step_navigation, pattern=r"^step:(prev|done)$"
         )
     )
+    application.add_handler(
+        CallbackQueryHandler(interactive_handler.handle_why, pattern=r"^step:why$")
+    )
 
     application.add_handler(
         MessageHandler(filters.TEXT & ~filters.COMMAND, search_handler.handle_free_text)

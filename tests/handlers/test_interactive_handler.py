@@ -1,11 +1,15 @@
+from unittest.mock import AsyncMock
+
 from app.database.session_repository import SessionRepository
 from app.handlers.interactive_handler import (
     build_step_keyboard,
     build_step_message,
     handle_step_navigation,
+    handle_why,
 )
 from app.models.recipe import FinalRecipe, Ingredient
 from app.models.session import SessionData, SessionState
+from app.services.explanation_service import ExplanationError
 from app.static import labels
 from tests.conftest import make_callback_update
 
@@ -128,3 +132,77 @@ def test_build_step_keyboard_shows_finish_label_on_last_step():
 
     assert labels.FINISH_COOKING_BUTTON in buttons
     assert labels.DONE_STEP_BUTTON not in buttons
+
+
+def test_build_step_keyboard_always_includes_why_button():
+    session = SessionData(chat_id=1, final_recipe=_final_recipe(), current_step_index=0)
+    keyboard = build_step_keyboard(session)
+    buttons = [button.callback_data for row in keyboard.inline_keyboard for button in row]
+
+    assert "step:why" in buttons
+
+
+async def test_why_answers_with_explanation_alert_and_does_not_change_state(
+    context_with_db, session_factory
+):
+    update = make_callback_update("step:why", chat_id=7)
+    await _seed_interactive(session_factory, 7, step_index=1)
+
+    explanation_service = AsyncMock()
+    explanation_service.explain.return_value = "כדי לשמור על העסיסיות של הבשר."
+    context_with_db.bot_data["explanation_service"] = explanation_service
+
+    await handle_why(update, context_with_db)
+
+    update.callback_query.answer.assert_awaited_once_with(
+        "כדי לשמור על העסיסיות של הבשר.", show_alert=True
+    )
+    explanation_service.explain.assert_awaited_once()
+
+    async with session_factory() as db_session:
+        session = await SessionRepository(db_session).get_by_chat_id(7)
+
+    assert session.current_step_index == 1
+    assert session.state == SessionState.DELIVERING_INTERACTIVE
+
+
+async def test_why_truncates_long_explanations_for_the_alert_limit(
+    context_with_db, session_factory
+):
+    update = make_callback_update("step:why", chat_id=8)
+    await _seed_interactive(session_factory, 8, step_index=0)
+
+    explanation_service = AsyncMock()
+    explanation_service.explain.return_value = "א" * 300
+    context_with_db.bot_data["explanation_service"] = explanation_service
+
+    await handle_why(update, context_with_db)
+
+    alert_text = update.callback_query.answer.call_args.args[0]
+    assert len(alert_text) <= 200
+
+
+async def test_why_shows_failure_alert_on_explanation_error(context_with_db, session_factory):
+    update = make_callback_update("step:why", chat_id=9)
+    await _seed_interactive(session_factory, 9, step_index=0)
+
+    explanation_service = AsyncMock()
+    explanation_service.explain.side_effect = ExplanationError("boom")
+    context_with_db.bot_data["explanation_service"] = explanation_service
+
+    await handle_why(update, context_with_db)
+
+    update.callback_query.answer.assert_awaited_once_with(
+        labels.EXPLANATION_FAILED_MESSAGE, show_alert=True
+    )
+
+
+async def test_why_rejects_when_not_delivering_interactive(context_with_db, session_factory):
+    update = make_callback_update("step:why", chat_id=10)
+    # No session seeded -> defaults to IDLE.
+
+    await handle_why(update, context_with_db)
+
+    update.callback_query.answer.assert_awaited_once_with(
+        labels.STALE_SELECTION_MESSAGE, show_alert=True
+    )

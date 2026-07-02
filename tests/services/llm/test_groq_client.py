@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from pydantic import BaseModel
 
-from app.models.recipe import ExtractedRecipe, Ingredient, StructuredRecipe
+from app.models.recipe import ExtractedRecipe, FinalRecipe, Ingredient, StructuredRecipe
 from app.services.llm.groq_client import GroqClient, LLMStructuringError
 
 
@@ -127,3 +127,16 @@ async def test_rewrite_final_recipe_returns_final_recipe(groq_client):
 
     assert result.recipe_name == "שניצל מותאם"
     assert result.cooking_tips == ["לטגן בשמן חם"]
+
+
+async def test_explain_step_returns_explanation_string(groq_client):
+    groq_client._client.chat.completions.create.return_value = _fake_completion(
+        '{"explanation": "שמן חם מונע ספיגת שמן מיותרת בבשר."}'
+    )
+    recipe = FinalRecipe(
+        recipe_name="שניצל", ingredients=[Ingredient(name="חזה עוף")], instructions=["לטגן"]
+    )
+
+    result = await groq_client.explain_step(recipe, 0)
+
+    assert result == "שמן חם מונע ספיגת שמן מיותרת בבשר."
