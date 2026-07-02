@@ -3,24 +3,16 @@ from telegram.ext import ContextTypes
 
 from app.database.engine import session_scope
 from app.database.session_repository import SessionRepository
+from app.handlers.checklist_handler import build_checklist_keyboard, build_checklist_message
 from app.models.session import ChecklistItem, SessionState
 from app.services.recipe_extraction_service import RecipeExtractionError
 from app.services.recipe_structuring_service import RecipeStructuringError
 from app.services.session_service import SessionService
 from app.static import labels
-from app.static.emojis import CHECKED, PLATE
 from app.utils.logging import get_logger
 from app.utils.telegram_helpers import typing_action
 
 logger = get_logger(__name__)
-
-
-def _build_checklist_stub_message(structured_recipe) -> str:
-    lines = [f"{PLATE} {structured_recipe.recipe_name}", "", labels.CHECKLIST_STUB_INTRO, ""]
-    for ingredient in structured_recipe.ingredients:
-        amount_suffix = f" - {ingredient.amount}" if ingredient.amount else ""
-        lines.append(f"{CHECKED} {ingredient.name}{amount_suffix}")
-    return "\n".join(lines)
 
 
 async def handle_recipe_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -66,7 +58,15 @@ async def handle_recipe_selection(update: Update, context: ContextTypes.DEFAULT_
                 await session_service.advance_to(session, SessionState.AWAITING_DISH_QUERY)
                 return
 
-        await query.edit_message_text(_build_checklist_stub_message(structured))
+        checklist = [
+            ChecklistItem(name=i.name, amount=i.amount, checked=True)
+            for i in structured.ingredients
+        ]
+
+        await query.edit_message_text(
+            build_checklist_message(structured.recipe_name),
+            reply_markup=build_checklist_keyboard(checklist),
+        )
 
         await session_service.advance_to(
             session,
@@ -74,8 +74,5 @@ async def handle_recipe_selection(update: Update, context: ContextTypes.DEFAULT_
             selected_index=selected_index,
             extracted_recipe=extracted,
             structured_recipe=structured,
-            checklist=[
-                ChecklistItem(name=i.name, amount=i.amount, checked=True)
-                for i in structured.ingredients
-            ],
+            checklist=checklist,
         )

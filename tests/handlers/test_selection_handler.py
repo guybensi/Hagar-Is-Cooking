@@ -83,9 +83,13 @@ async def test_successful_selection_shows_checklist_and_advances_session(
     await handle_recipe_selection(update, context_with_db)
 
     update.callback_query.answer.assert_awaited_once()
-    final_call_text = update.callback_query.edit_message_text.call_args_list[-1].args[0]
+    final_call = update.callback_query.edit_message_text.call_args_list[-1]
+    final_call_text = final_call.args[0]
     assert "שניצל עוף" in final_call_text
-    assert "חזה עוף" in final_call_text
+
+    keyboard = final_call.kwargs["reply_markup"]
+    button_labels = [button.text for row in keyboard.inline_keyboard for button in row]
+    assert any("חזה עוף" in label for label in button_labels)
 
     async with session_factory() as db_session:
         session = await SessionRepository(db_session).get_by_chat_id(3)

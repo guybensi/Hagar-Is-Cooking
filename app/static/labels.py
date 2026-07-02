@@ -43,4 +43,8 @@ STRUCTURING_FAILED_MESSAGE = "התקשיתי להבין את המתכון הזה
 
 STALE_SELECTION_MESSAGE = f"האפשרות הזו כבר לא זמינה. אפשר להתחיל חיפוש חדש {SEARCH}"
 
-CHECKLIST_STUB_INTRO = f"מצאתי את המתכון! הנה רשימת המצרכים {CHECKED}"
+CHECKLIST_INTRO = f"סמן/י אילו מצרכים יש לך בבית {CHECKED}"
+
+FINISHED_BUTTON = "✔ סיימתי"
+
+PROCESSING_CHECKLIST_MESSAGE = "🔄 בודק/ת אילו מצרכים חסרים..."
