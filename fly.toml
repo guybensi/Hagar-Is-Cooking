@@ -2,7 +2,7 @@
 # App name must be globally unique on Fly -- change it if "hagar-is-cooking" is taken
 # (`fly apps create <name>` will tell you, or just edit this file before `fly launch`).
 app = "hagar-is-cooking"
-primary_region = "iad"
+primary_region = "ams"
 
 [build]
 
