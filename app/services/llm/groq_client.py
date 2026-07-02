@@ -4,6 +4,7 @@ from groq import (
     APIConnectionError,
     APITimeoutError,
     AsyncGroq,
+    BadRequestError,
     InternalServerError,
     RateLimitError,
 )
@@ -72,9 +73,12 @@ class GroqClient:
         last_error: Exception | None = None
 
         for attempt in range(max_validation_retries + 1):
-            completion = await self._create_completion(
-                system_prompt=system_prompt, user_prompt=prompt, response_format=response_format
-            )
+            try:
+                completion = await self._create_completion(
+                    system_prompt=system_prompt, user_prompt=prompt, response_format=response_format
+                )
+            except BadRequestError as exc:
+                raise LLMStructuringError(f"Groq rejected the request (400): {exc}") from exc
             raw_content = completion.choices[0].message.content
 
             try:

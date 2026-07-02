@@ -32,7 +32,9 @@ def build_application(settings: Settings | None = None) -> Application:
     application.bot_data["recipe_search_service"] = RecipeSearchService(
         api_key=settings.tavily_api_key
     )
-    application.bot_data["recipe_extraction_service"] = RecipeExtractionService()
+    application.bot_data["recipe_extraction_service"] = RecipeExtractionService(
+        api_key=settings.tavily_api_key
+    )
     application.bot_data["recipe_structuring_service"] = RecipeStructuringService(groq_client)
     application.bot_data["substitution_service"] = SubstitutionService(groq_client)
     application.bot_data["final_recipe_service"] = FinalRecipeService(groq_client)

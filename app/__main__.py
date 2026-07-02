@@ -1,4 +1,5 @@
 import asyncio
+import sys
 
 from app.bot.application import build_application
 from app.config.settings import get_settings
@@ -9,6 +10,10 @@ logger = get_logger(__name__)
 
 
 def main() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
+
     settings = get_settings()
     configure_logging(settings.log_level)
 
