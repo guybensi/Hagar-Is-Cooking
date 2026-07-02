@@ -5,8 +5,10 @@ from app.static.emojis import (
     CHEF,
     COOKING,
     DOCUMENT,
+    DONE,
     ERROR,
     PLATE,
+    PREVIOUS,
     SEARCH,
     SPARKLES,
 )
@@ -88,6 +90,12 @@ FULL_RECIPE_INSTRUCTIONS_HEADER = f"{CHEF} הכנה:"
 
 FULL_RECIPE_TIPS_HEADER = f"{BULB} טיפים לבישול:"
 
-INTERACTIVE_MODE_COMING_SOON_MESSAGE = (
-    f"{COOKING} מצב הבישול האינטראקטיבי יתווסף בקרוב! בינתיים אפשר לבחור במתכון המלא."
-)
+STEP_HEADER = "שלב {step_number} מתוך {total_steps}"
+
+PREVIOUS_STEP_BUTTON = f"{PREVIOUS} הקודם"
+
+DONE_STEP_BUTTON = f"{DONE} בוצע"
+
+FINISH_COOKING_BUTTON = f"{DONE} סיימתי לבשל!"
+
+COOKING_COMPLETE_MESSAGE = "🎉 כל הכבוד! סיימת לבשל את {recipe_name}. בתאבון! 😋"

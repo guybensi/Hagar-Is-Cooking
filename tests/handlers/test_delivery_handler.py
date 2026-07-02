@@ -49,23 +49,22 @@ async def test_full_mode_renders_recipe_and_completes_session(context_with_db, s
     assert session.delivery_mode == "full"
 
 
-async def test_interactive_mode_transitions_to_delivering_interactive(
-    context_with_db, session_factory
-):
+async def test_interactive_mode_renders_first_step(context_with_db, session_factory):
     update = make_callback_update("mode:interactive", chat_id=2)
     await _seed_awaiting_delivery_mode(session_factory, 2)
 
     await handle_mode_choice(update, context_with_db)
 
-    update.callback_query.edit_message_text.assert_awaited_once_with(
-        labels.INTERACTIVE_MODE_COMING_SOON_MESSAGE
-    )
+    message = update.callback_query.edit_message_text.call_args.args[0]
+    assert "שלב 1 מתוך 2" in message
+    assert "לשטוף את החזה" in message
 
     async with session_factory() as db_session:
         session = await SessionRepository(db_session).get_by_chat_id(2)
 
     assert session.state == SessionState.DELIVERING_INTERACTIVE
     assert session.delivery_mode == "interactive"
+    assert session.current_step_index == 0
 
 
 async def test_rejects_when_not_awaiting_delivery_mode(context_with_db, session_factory):

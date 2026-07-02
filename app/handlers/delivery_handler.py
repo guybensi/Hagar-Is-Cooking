@@ -3,6 +3,7 @@ from telegram.ext import ContextTypes
 
 from app.database.engine import session_scope
 from app.database.session_repository import SessionRepository
+from app.handlers.interactive_handler import render_step
 from app.models.recipe import FinalRecipe
 from app.models.session import SessionState
 from app.services.session_service import SessionService
@@ -66,8 +67,9 @@ async def handle_mode_choice(update: Update, context: ContextTypes.DEFAULT_TYPE)
             )
             return
 
-        # mode == "interactive": full step-by-step navigation lands in the next increment.
-        await query.edit_message_text(labels.INTERACTIVE_MODE_COMING_SOON_MESSAGE)
+        # mode == "interactive"
+        session.current_step_index = 0
         await session_service.advance_to(
             session, SessionState.DELIVERING_INTERACTIVE, delivery_mode="interactive"
         )
+        await render_step(query, session_service, session)

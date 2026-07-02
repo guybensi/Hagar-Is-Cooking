@@ -9,6 +9,7 @@ from telegram.ext import (
 from app.handlers import (
     checklist_handler,
     delivery_handler,
+    interactive_handler,
     search_handler,
     selection_handler,
     start_handler,
@@ -39,6 +40,11 @@ def register_handlers(application: Application) -> None:
     application.add_handler(
         CallbackQueryHandler(
             delivery_handler.handle_mode_choice, pattern=r"^mode:(full|interactive)$"
+        )
+    )
+    application.add_handler(
+        CallbackQueryHandler(
+            interactive_handler.handle_step_navigation, pattern=r"^step:(prev|done)$"
         )
     )
 
