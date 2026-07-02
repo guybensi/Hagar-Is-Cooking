@@ -68,6 +68,48 @@ uv run ruff check .  # lint
 
 CI (`.github/workflows/ci.yml`) runs both on every push and pull request.
 
+## Deploying to Fly.io
+
+The bot uses long polling (not webhooks), so the only requirement is a host that keeps the
+process running continuously with the right env vars — no public HTTPS endpoint needed. A
+`Dockerfile` and `fly.toml` are included for that.
+
+1. [Install flyctl](https://fly.io/docs/hands-on/install-flyctl/) and sign in: `fly auth login`.
+2. From the repo root, create the app (pick a globally-unique name if `hagar-is-cooking` is
+   taken — edit the `app = "..."` line in `fly.toml` to match):
+   ```bash
+   fly launch --no-deploy --copy-config
+   ```
+   This reads `fly.toml` as-is and just registers the app; `--no-deploy` skips deploying before
+   secrets are set.
+3. Create the persistent volume for the SQLite database (must match `fly.toml`'s
+   `[mounts] source`, and be created in the same region as `primary_region`):
+   ```bash
+   fly volumes create hagar_data --region iad --size 1
+   ```
+4. Set your secrets (never put these in `fly.toml` — it's committed to git):
+   ```bash
+   fly secrets set TELEGRAM_BOT_TOKEN=... GROQ_API_KEY=... TAVILY_API_KEY=...
+   ```
+5. Deploy:
+   ```bash
+   fly deploy
+   ```
+   No local Docker install is required — `flyctl` builds the image on Fly's remote builders if
+   Docker isn't available locally.
+6. Make sure only **one** instance is ever running — Telegram's long-polling API rejects a
+   second concurrent poller (`409 Conflict`) for the same bot token:
+   ```bash
+   fly scale count 1 --max-per-region=1
+   ```
+7. Watch logs / confirm it's alive:
+   ```bash
+   fly logs
+   ```
+
+To redeploy after code changes, just `fly deploy` again — the `sessions`/`users`/`recipe_history`
+SQLite data on the `hagar_data` volume survives across deploys and restarts.
+
 ## Project structure
 
 ```
@@ -88,7 +130,7 @@ app/
 │   └── interactive_handler.py # step-by-step navigation + 💡 why explanations
 ├── services/                # business logic, one responsibility per service
 │   ├── recipe_search_service.py       # Tavily site:mako.co.il search
-│   ├── recipe_extraction_service.py   # httpx + BeautifulSoup4 page cleanup
+│   ├── recipe_extraction_service.py   # Tavily extract API -> cleaned page text
 │   ├── recipe_structuring_service.py  # Groq: raw text -> StructuredRecipe
 │   ├── substitution_service.py        # Groq: missing ingredients -> BUY/SKIP/SUBSTITUTE
 │   ├── final_recipe_service.py        # Groq: rewrite recipe to match what's available
@@ -135,7 +177,8 @@ tests/                         # mirrors app/ 1:1 -- every module above has a ma
 - Multi-language UI (currently Hebrew-only, by design).
 - Additional recipe sources beyond mako.co.il.
 - Per-user rate limiting / Groq & Tavily quota guarding.
-- Docker image + webhook-mode deployment (currently long polling).
+- Webhook-mode deployment (currently long polling — fine at this scale, but polling is a single
+  point of contention if you ever need to scale beyond one instance).
 - Alembic-based schema migrations (currently `create_all` on startup).
 - Surface `recipe_history` as a user-facing "my past recipes" feature.
 - Nutrition info, recipe/step images, voice input.
