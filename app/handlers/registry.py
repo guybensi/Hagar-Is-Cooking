@@ -6,7 +6,13 @@ from telegram.ext import (
     filters,
 )
 
-from app.handlers import checklist_handler, search_handler, selection_handler, start_handler
+from app.handlers import (
+    checklist_handler,
+    search_handler,
+    selection_handler,
+    start_handler,
+    substitution_handler,
+)
 
 
 def register_handlers(application: Application) -> None:
@@ -23,6 +29,11 @@ def register_handlers(application: Application) -> None:
     )
     application.add_handler(
         CallbackQueryHandler(checklist_handler.handle_finished, pattern=r"^finished$")
+    )
+    application.add_handler(
+        CallbackQueryHandler(
+            substitution_handler.handle_answer, pattern=r"^sub:\d+:(yes|no)$"
+        )
     )
 
     application.add_handler(

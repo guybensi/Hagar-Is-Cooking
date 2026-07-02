@@ -1,4 +1,4 @@
-from app.static.emojis import BOOK, CHECKED, COOKING, ERROR, PLATE, SEARCH
+from app.static.emojis import BOOK, CHECKED, COOKING, ERROR, PLATE, SEARCH, SPARKLES
 
 WELCOME_MESSAGE = (
     f"שלום! {COOKING}\n"
@@ -48,3 +48,15 @@ CHECKLIST_INTRO = f"סמן/י אילו מצרכים יש לך בבית {CHECKED}
 FINISHED_BUTTON = "✔ סיימתי"
 
 PROCESSING_CHECKLIST_MESSAGE = "🔄 בודק/ת אילו מצרכים חסרים..."
+
+SUBSTITUTION_QUESTION = "אין {ingredient} 🤔\nאפשר להשתמש ב{replacement} במקום.\n\nלהשתמש בתחליף?"
+
+SUBSTITUTION_YES_BUTTON = "✅ כן, להשתמש בתחליף"
+
+SUBSTITUTION_NO_BUTTON = "❌ לא, בלי זה"
+
+SUBSTITUTION_FAILED_MESSAGE = (
+    "התקשיתי להחליט מה לעשות עם המצרכים החסרים 😅 אפשר לנסות שוב מהצ'קליסט?"
+)
+
+GENERATING_FINAL_MESSAGE = f"{SPARKLES} מכין/ה עבורך את המתכון הסופי..."

@@ -8,6 +8,7 @@ from app.services.llm.groq_client import GroqClient
 from app.services.recipe_extraction_service import RecipeExtractionService
 from app.services.recipe_search_service import RecipeSearchService
 from app.services.recipe_structuring_service import RecipeStructuringService
+from app.services.substitution_service import SubstitutionService
 
 
 def build_application(settings: Settings | None = None) -> Application:
@@ -31,6 +32,7 @@ def build_application(settings: Settings | None = None) -> Application:
     )
     application.bot_data["recipe_extraction_service"] = RecipeExtractionService()
     application.bot_data["recipe_structuring_service"] = RecipeStructuringService(groq_client)
+    application.bot_data["substitution_service"] = SubstitutionService(groq_client)
 
     register_handlers(application)
     application.add_error_handler(handle_error)

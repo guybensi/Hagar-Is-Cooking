@@ -3,11 +3,20 @@ from telegram.ext import ContextTypes
 
 from app.database.engine import session_scope
 from app.database.session_repository import SessionRepository
+from app.handlers.substitution_handler import (
+    build_substitution_keyboard,
+    build_substitution_question_message,
+    substitute_decisions,
+)
+from app.models.recipe import Ingredient
 from app.models.session import ChecklistItem, SessionData, SessionState
+from app.models.substitution import SubstitutionAnswer
 from app.services.session_service import SessionService
+from app.services.substitution_service import SubstitutionDecisionError
 from app.static import labels
 from app.static.emojis import CHECKED, PLATE, UNCHECKED
 from app.utils.logging import get_logger
+from app.utils.telegram_helpers import typing_action
 from app.utils.text import truncate
 
 logger = get_logger(__name__)
@@ -56,6 +65,7 @@ async def handle_toggle(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 
 async def handle_finished(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Entry point for step 7: decide BUY/SKIP/SUBSTITUTE for every missing ingredient."""
     query = update.callback_query
     await query.answer()
 
@@ -70,5 +80,54 @@ async def handle_finished(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             await query.edit_message_text(labels.STALE_SELECTION_MESSAGE)
             return
 
+        missing = [item for item in session.checklist if not item.checked]
+
+        if not missing:
+            await query.edit_message_text(labels.GENERATING_FINAL_MESSAGE)
+            await session_service.advance_to(
+                session,
+                SessionState.GENERATING_FINAL_RECIPE,
+                substitution_decisions=[],
+                substitution_answers=[],
+            )
+            return
+
         await query.edit_message_text(labels.PROCESSING_CHECKLIST_MESSAGE)
-        await session_service.advance_to(session, SessionState.DECIDING_SUBSTITUTIONS)
+
+        async with typing_action(context, chat_id):
+            substitution_service = context.bot_data["substitution_service"]
+            missing_ingredients = [Ingredient(name=i.name, amount=i.amount) for i in missing]
+            try:
+                decisions = await substitution_service.decide(
+                    missing_ingredients, session.structured_recipe
+                )
+            except SubstitutionDecisionError:
+                logger.error("substitution_decision_failed", chat_id=chat_id, exc_info=True)
+                await query.edit_message_text(labels.SUBSTITUTION_FAILED_MESSAGE)
+                await session_service.advance_to(session, SessionState.AWAITING_CHECKLIST)
+                return
+
+        pending = substitute_decisions(decisions)
+
+        if not pending:
+            await query.edit_message_text(labels.GENERATING_FINAL_MESSAGE)
+            await session_service.advance_to(
+                session,
+                SessionState.GENERATING_FINAL_RECIPE,
+                substitution_decisions=decisions,
+                substitution_answers=[],
+            )
+            return
+
+        await query.edit_message_text(
+            build_substitution_question_message(pending[0]),
+            reply_markup=build_substitution_keyboard(0),
+        )
+        answers = [SubstitutionAnswer(ingredient_name=d.ingredient_name) for d in pending]
+        await session_service.advance_to(
+            session,
+            SessionState.AWAITING_SUBSTITUTION_ANSWERS,
+            substitution_decisions=decisions,
+            substitution_answers=answers,
+            pending_substitution_index=0,
+        )
