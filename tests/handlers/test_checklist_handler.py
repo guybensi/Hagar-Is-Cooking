@@ -98,11 +98,10 @@ async def test_finished_with_no_missing_ingredients_skips_straight_to_final_reci
 
     await handle_finished(update, context_with_db)
 
-    calls = [call.args[0] for call in update.callback_query.edit_message_text.call_args_list]
-    assert calls == [
-        labels.GENERATING_FINAL_MESSAGE,
-        labels.FINAL_RECIPE_READY_MESSAGE.format(recipe_name="שניצל מותאם"),
-    ]
+    calls = update.callback_query.edit_message_text.call_args_list
+    assert calls[0].args[0] == labels.GENERATING_FINAL_MESSAGE
+    assert "שניצל מותאם" in calls[1].args[0]
+    assert calls[1].kwargs["reply_markup"] is not None
 
     async with session_factory() as db_session:
         session = await SessionRepository(db_session).get_by_chat_id(5)
@@ -128,12 +127,11 @@ async def test_finished_with_no_substitute_decisions_skips_to_final_recipe(
 
     await handle_finished(update, context_with_db)
 
-    calls = [call.args[0] for call in update.callback_query.edit_message_text.call_args_list]
-    assert calls == [
-        labels.PROCESSING_CHECKLIST_MESSAGE,
-        labels.GENERATING_FINAL_MESSAGE,
-        labels.FINAL_RECIPE_READY_MESSAGE.format(recipe_name="שניצל מותאם"),
-    ]
+    calls = update.callback_query.edit_message_text.call_args_list
+    assert calls[0].args[0] == labels.PROCESSING_CHECKLIST_MESSAGE
+    assert calls[1].args[0] == labels.GENERATING_FINAL_MESSAGE
+    assert "שניצל מותאם" in calls[2].args[0]
+    assert calls[2].kwargs["reply_markup"] is not None
 
     async with session_factory() as db_session:
         session = await SessionRepository(db_session).get_by_chat_id(6)

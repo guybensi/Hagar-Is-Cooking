@@ -1,4 +1,15 @@
-from app.static.emojis import BOOK, CHECKED, COOKING, ERROR, PLATE, SEARCH, SPARKLES
+from app.static.emojis import (
+    BOOK,
+    BULB,
+    CHECKED,
+    CHEF,
+    COOKING,
+    DOCUMENT,
+    ERROR,
+    PLATE,
+    SEARCH,
+    SPARKLES,
+)
 
 WELCOME_MESSAGE = (
     f"שלום! {COOKING}\n"
@@ -64,3 +75,19 @@ GENERATING_FINAL_MESSAGE = f"{SPARKLES} מכין/ה עבורך את המתכון
 FINAL_RECIPE_FAILED_MESSAGE = "לא הצלחתי להכין את המתכון הסופי 😅 אפשר לנסות שוב מהצ'קליסט?"
 
 FINAL_RECIPE_READY_MESSAGE = SPARKLES + " המתכון מוכן: {recipe_name}!"
+
+DELIVERY_MODE_PROMPT = "איך תרצה/י לקבל את המתכון?"
+
+INTERACTIVE_MODE_BUTTON = f"{COOKING} בישול אינטראקטיבי"
+
+FULL_RECIPE_MODE_BUTTON = f"{DOCUMENT} מתכון מלא"
+
+FULL_RECIPE_INGREDIENTS_HEADER = "📝 מצרכים:"
+
+FULL_RECIPE_INSTRUCTIONS_HEADER = f"{CHEF} הכנה:"
+
+FULL_RECIPE_TIPS_HEADER = f"{BULB} טיפים לבישול:"
+
+INTERACTIVE_MODE_COMING_SOON_MESSAGE = (
+    f"{COOKING} מצב הבישול האינטראקטיבי יתווסף בקרוב! בינתיים אפשר לבחור במתכון המלא."
+)

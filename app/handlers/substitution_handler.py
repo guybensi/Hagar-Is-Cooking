@@ -3,6 +3,7 @@ from telegram.ext import ContextTypes
 
 from app.database.engine import session_scope
 from app.database.session_repository import SessionRepository
+from app.handlers.delivery_handler import build_delivery_mode_keyboard
 from app.models.recipe import Ingredient
 from app.models.session import SessionData, SessionState
 from app.models.substitution import SubstitutionAction, SubstitutionDecision
@@ -82,9 +83,13 @@ async def generate_and_render_final_recipe(
             await session_service.advance_to(session, SessionState.AWAITING_CHECKLIST)
             return
 
-    await query.edit_message_text(
-        labels.FINAL_RECIPE_READY_MESSAGE.format(recipe_name=final_recipe.recipe_name)
+    ready_message = "\n\n".join(
+        [
+            labels.FINAL_RECIPE_READY_MESSAGE.format(recipe_name=final_recipe.recipe_name),
+            labels.DELIVERY_MODE_PROMPT,
+        ]
     )
+    await query.edit_message_text(ready_message, reply_markup=build_delivery_mode_keyboard())
     await session_service.advance_to(
         session, SessionState.AWAITING_DELIVERY_MODE, final_recipe=final_recipe
     )
