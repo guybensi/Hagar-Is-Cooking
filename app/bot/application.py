@@ -4,6 +4,7 @@ from app.bot.error_handler import handle_error
 from app.config.settings import Settings, get_settings
 from app.database.engine import create_engine, create_session_factory
 from app.handlers.registry import register_handlers
+from app.services.final_recipe_service import FinalRecipeService
 from app.services.llm.groq_client import GroqClient
 from app.services.recipe_extraction_service import RecipeExtractionService
 from app.services.recipe_search_service import RecipeSearchService
@@ -33,6 +34,7 @@ def build_application(settings: Settings | None = None) -> Application:
     application.bot_data["recipe_extraction_service"] = RecipeExtractionService()
     application.bot_data["recipe_structuring_service"] = RecipeStructuringService(groq_client)
     application.bot_data["substitution_service"] = SubstitutionService(groq_client)
+    application.bot_data["final_recipe_service"] = FinalRecipeService(groq_client)
 
     register_handlers(application)
     application.add_error_handler(handle_error)

@@ -9,9 +9,14 @@ from groq import (
 )
 from pydantic import BaseModel, ValidationError
 
-from app.models.recipe import ExtractedRecipe, Ingredient, StructuredRecipe
+from app.models.recipe import ExtractedRecipe, FinalRecipe, Ingredient, StructuredRecipe
 from app.models.substitution import SubstitutionDecision, SubstitutionDecisionList
-from app.prompts import decide_substitutions, normalize_query, structure_recipe
+from app.prompts import (
+    decide_substitutions,
+    normalize_query,
+    rewrite_final_recipe,
+    structure_recipe,
+)
 from app.services.llm.schema_builder import build_json_schema_response_format
 from app.utils.logging import get_logger
 from app.utils.retry import retry_transient_errors
@@ -113,3 +118,19 @@ class GroqClient:
             response_model=SubstitutionDecisionList,
         )
         return result.decisions
+
+    async def rewrite_final_recipe(
+        self,
+        structured: StructuredRecipe,
+        available: list[Ingredient],
+        missing: list[Ingredient],
+        accepted_substitutions: list[SubstitutionDecision],
+    ) -> FinalRecipe:
+        result = await self._structured_completion(
+            system_prompt=rewrite_final_recipe.SYSTEM_PROMPT,
+            user_prompt=rewrite_final_recipe.build_user_prompt(
+                structured, available, missing, accepted_substitutions
+            ),
+            response_model=FinalRecipe,
+        )
+        return result

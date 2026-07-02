@@ -60,3 +60,7 @@ SUBSTITUTION_FAILED_MESSAGE = (
 )
 
 GENERATING_FINAL_MESSAGE = f"{SPARKLES} מכין/ה עבורך את המתכון הסופי..."
+
+FINAL_RECIPE_FAILED_MESSAGE = "לא הצלחתי להכין את המתכון הסופי 😅 אפשר לנסות שוב מהצ'קליסט?"
+
+FINAL_RECIPE_READY_MESSAGE = SPARKLES + " המתכון מוכן: {recipe_name}!"

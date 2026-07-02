@@ -110,3 +110,20 @@ async def test_decide_substitutions_returns_decision_list(groq_client):
 
     assert len(result) == 1
     assert result[0].replacement == "שורש פטרוזיליה"
+
+
+async def test_rewrite_final_recipe_returns_final_recipe(groq_client):
+    groq_client._client.chat.completions.create.return_value = _fake_completion(
+        '{"recipe_name": "שניצל מותאם", "ingredients": [{"name": "חזה עוף", "amount": null}], '
+        '"instructions": ["לטגן"], "cooking_tips": ["לטגן בשמן חם"]}'
+    )
+    recipe = StructuredRecipe(
+        recipe_name="שניצל", ingredients=[Ingredient(name="חזה עוף")], instructions=["לטגן"]
+    )
+
+    result = await groq_client.rewrite_final_recipe(
+        recipe, [Ingredient(name="חזה עוף")], [], []
+    )
+
+    assert result.recipe_name == "שניצל מותאם"
+    assert result.cooking_tips == ["לטגן בשמן חם"]

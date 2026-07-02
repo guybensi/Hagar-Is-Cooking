@@ -6,6 +6,7 @@ from app.database.session_repository import SessionRepository
 from app.handlers.substitution_handler import (
     build_substitution_keyboard,
     build_substitution_question_message,
+    generate_and_render_final_recipe,
     substitute_decisions,
 )
 from app.models.recipe import Ingredient
@@ -90,6 +91,7 @@ async def handle_finished(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 substitution_decisions=[],
                 substitution_answers=[],
             )
+            await generate_and_render_final_recipe(query, context, session_service, session)
             return
 
         await query.edit_message_text(labels.PROCESSING_CHECKLIST_MESSAGE)
@@ -117,6 +119,7 @@ async def handle_finished(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 substitution_decisions=decisions,
                 substitution_answers=[],
             )
+            await generate_and_render_final_recipe(query, context, session_service, session)
             return
 
         await query.edit_message_text(

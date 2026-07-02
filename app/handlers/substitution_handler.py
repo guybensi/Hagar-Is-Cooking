@@ -1,13 +1,16 @@
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
 from app.database.engine import session_scope
 from app.database.session_repository import SessionRepository
-from app.models.session import SessionState
+from app.models.recipe import Ingredient
+from app.models.session import SessionData, SessionState
 from app.models.substitution import SubstitutionAction, SubstitutionDecision
+from app.services.final_recipe_service import FinalRecipeGenerationError
 from app.services.session_service import SessionService
 from app.static import labels
 from app.utils.logging import get_logger
+from app.utils.telegram_helpers import typing_action
 
 logger = get_logger(__name__)
 
@@ -36,6 +39,54 @@ def build_substitution_keyboard(index: int) -> InlineKeyboardMarkup:
                 )
             ],
         ]
+    )
+
+
+async def generate_and_render_final_recipe(
+    query: CallbackQuery,
+    context: ContextTypes.DEFAULT_TYPE,
+    session_service: SessionService,
+    session: SessionData,
+) -> None:
+    """Entry point for step 9: generate the ingredient-adapted final recipe via Groq.
+
+    Shared by checklist_handler (when nothing needs substituting) and substitution_handler
+    (once every proposed substitution has been answered).
+    """
+    chat_id = session.chat_id
+    available = [Ingredient(name=i.name, amount=i.amount) for i in session.checklist if i.checked]
+
+    accepted_names = {
+        answer.ingredient_name for answer in session.substitution_answers if answer.accepted
+    }
+    missing = [
+        Ingredient(name=i.name, amount=i.amount)
+        for i in session.checklist
+        if not i.checked and i.name not in accepted_names
+    ]
+    accepted_substitutions = [
+        d
+        for d in session.substitution_decisions
+        if d.action == SubstitutionAction.SUBSTITUTE and d.ingredient_name in accepted_names
+    ]
+
+    async with typing_action(context, chat_id):
+        final_recipe_service = context.bot_data["final_recipe_service"]
+        try:
+            final_recipe = await final_recipe_service.generate(
+                session.structured_recipe, available, missing, accepted_substitutions
+            )
+        except FinalRecipeGenerationError:
+            logger.error("final_recipe_generation_failed", chat_id=chat_id, exc_info=True)
+            await query.edit_message_text(labels.FINAL_RECIPE_FAILED_MESSAGE)
+            await session_service.advance_to(session, SessionState.AWAITING_CHECKLIST)
+            return
+
+    await query.edit_message_text(
+        labels.FINAL_RECIPE_READY_MESSAGE.format(recipe_name=final_recipe.recipe_name)
+    )
+    await session_service.advance_to(
+        session, SessionState.AWAITING_DELIVERY_MODE, final_recipe=final_recipe
     )
 
 
@@ -89,3 +140,5 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             substitution_answers=session.substitution_answers,
             pending_substitution_index=next_index,
         )
+
+        await generate_and_render_final_recipe(query, context, session_service, session)

@@ -1,3 +1,5 @@
+from unittest.mock import AsyncMock
+
 from app.database.session_repository import SessionRepository
 from app.handlers.substitution_handler import (
     build_substitution_keyboard,
@@ -5,8 +7,10 @@ from app.handlers.substitution_handler import (
     handle_answer,
     substitute_decisions,
 )
+from app.models.recipe import FinalRecipe, Ingredient
 from app.models.session import SessionData, SessionState
 from app.models.substitution import SubstitutionAction, SubstitutionAnswer, SubstitutionDecision
+from app.services.final_recipe_service import FinalRecipeGenerationError
 from app.static import labels
 from tests.conftest import make_callback_update
 
@@ -70,17 +74,49 @@ async def test_answering_last_pending_generates_final_recipe(context_with_db, se
     update = make_callback_update("sub:1:no", chat_id=2)
     await _seed_awaiting_answers(session_factory, 2, pending_index=1)
 
+    final_recipe_service = AsyncMock()
+    final_recipe_service.generate.return_value = FinalRecipe(
+        recipe_name="שניצל מותאם",
+        ingredients=[Ingredient(name="חזה עוף")],
+        instructions=["לטגן"],
+    )
+    context_with_db.bot_data["final_recipe_service"] = final_recipe_service
+
     await handle_answer(update, context_with_db)
 
-    update.callback_query.edit_message_text.assert_awaited_once_with(
-        labels.GENERATING_FINAL_MESSAGE
-    )
+    calls = [call.args[0] for call in update.callback_query.edit_message_text.call_args_list]
+    assert calls == [
+        labels.GENERATING_FINAL_MESSAGE,
+        labels.FINAL_RECIPE_READY_MESSAGE.format(recipe_name="שניצל מותאם"),
+    ]
 
     async with session_factory() as db_session:
         session = await SessionRepository(db_session).get_by_chat_id(2)
 
-    assert session.state == SessionState.GENERATING_FINAL_RECIPE
+    assert session.state == SessionState.AWAITING_DELIVERY_MODE
     assert session.substitution_answers[1].accepted is False
+    assert session.final_recipe.recipe_name == "שניצל מותאם"
+
+
+async def test_answering_last_pending_reverts_on_final_recipe_generation_failure(
+    context_with_db, session_factory
+):
+    update = make_callback_update("sub:1:yes", chat_id=5)
+    await _seed_awaiting_answers(session_factory, 5, pending_index=1)
+
+    final_recipe_service = AsyncMock()
+    final_recipe_service.generate.side_effect = FinalRecipeGenerationError("boom")
+    context_with_db.bot_data["final_recipe_service"] = final_recipe_service
+
+    await handle_answer(update, context_with_db)
+
+    final_call = update.callback_query.edit_message_text.call_args_list[-1]
+    assert final_call.args[0] == labels.FINAL_RECIPE_FAILED_MESSAGE
+
+    async with session_factory() as db_session:
+        session = await SessionRepository(db_session).get_by_chat_id(5)
+
+    assert session.state == SessionState.AWAITING_CHECKLIST
 
 
 async def test_answer_rejects_out_of_order_index(context_with_db, session_factory):

@@ -2,12 +2,20 @@ from unittest.mock import AsyncMock
 
 from app.database.session_repository import SessionRepository
 from app.handlers.checklist_handler import handle_finished, handle_toggle
-from app.models.recipe import Ingredient, StructuredRecipe
+from app.models.recipe import FinalRecipe, Ingredient, StructuredRecipe
 from app.models.session import ChecklistItem, SessionData, SessionState
 from app.models.substitution import SubstitutionAction, SubstitutionDecision
 from app.services.substitution_service import SubstitutionDecisionError
 from app.static import labels
 from tests.conftest import make_callback_update
+
+
+def _fake_final_recipe_service() -> AsyncMock:
+    service = AsyncMock()
+    service.generate.return_value = FinalRecipe(
+        recipe_name="שניצל מותאם", ingredients=[Ingredient(name="חזה עוף")], instructions=["לטגן"]
+    )
+    return service
 
 
 def _structured() -> StructuredRecipe:
@@ -86,17 +94,21 @@ async def test_finished_with_no_missing_ingredients_skips_straight_to_final_reci
 ):
     update = make_callback_update("finished", chat_id=5)
     await _seed_awaiting_checklist(session_factory, 5, all_checked=True)
+    context_with_db.bot_data["final_recipe_service"] = _fake_final_recipe_service()
 
     await handle_finished(update, context_with_db)
 
-    update.callback_query.edit_message_text.assert_awaited_once_with(
-        labels.GENERATING_FINAL_MESSAGE
-    )
+    calls = [call.args[0] for call in update.callback_query.edit_message_text.call_args_list]
+    assert calls == [
+        labels.GENERATING_FINAL_MESSAGE,
+        labels.FINAL_RECIPE_READY_MESSAGE.format(recipe_name="שניצל מותאם"),
+    ]
 
     async with session_factory() as db_session:
         session = await SessionRepository(db_session).get_by_chat_id(5)
 
-    assert session.state == SessionState.GENERATING_FINAL_RECIPE
+    assert session.state == SessionState.AWAITING_DELIVERY_MODE
+    assert session.final_recipe.recipe_name == "שניצל מותאם"
 
 
 async def test_finished_with_no_substitute_decisions_skips_to_final_recipe(
@@ -112,16 +124,21 @@ async def test_finished_with_no_substitute_decisions_skips_to_final_recipe(
         )
     ]
     context_with_db.bot_data["substitution_service"] = substitution_service
+    context_with_db.bot_data["final_recipe_service"] = _fake_final_recipe_service()
 
     await handle_finished(update, context_with_db)
 
     calls = [call.args[0] for call in update.callback_query.edit_message_text.call_args_list]
-    assert calls == [labels.PROCESSING_CHECKLIST_MESSAGE, labels.GENERATING_FINAL_MESSAGE]
+    assert calls == [
+        labels.PROCESSING_CHECKLIST_MESSAGE,
+        labels.GENERATING_FINAL_MESSAGE,
+        labels.FINAL_RECIPE_READY_MESSAGE.format(recipe_name="שניצל מותאם"),
+    ]
 
     async with session_factory() as db_session:
         session = await SessionRepository(db_session).get_by_chat_id(6)
 
-    assert session.state == SessionState.GENERATING_FINAL_RECIPE
+    assert session.state == SessionState.AWAITING_DELIVERY_MODE
     assert len(session.substitution_decisions) == 1
 
 
